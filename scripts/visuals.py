@@ -22,7 +22,7 @@ PLUTO_COLOR = (200, 180, 160)
 WIDTH, HEIGHT = 1000, 800
 
 
-def render_scene(screen, bodies, camera, show_trails, show_ui, time_multiplier, movement_speed_multiplier, width, height):
+def render_scene(screen, bodies, camera, show_trails, show_ui, time_multiplier, movement_speed_multiplier, width, height, locked_body=None):
     """Render the entire scene"""
     screen.fill(BLACK)
     
@@ -41,7 +41,7 @@ def render_scene(screen, bodies, camera, show_trails, show_ui, time_multiplier, 
     
     # Draw UI
     if show_ui:
-        draw_ui(screen, camera, show_trails, time_multiplier, movement_speed_multiplier, width, height)
+        draw_ui(screen, camera, show_trails, show_ui, time_multiplier, movement_speed_multiplier, width, height, locked_body)
 
 
 def draw_trails(screen, bodies, camera, width, height):
@@ -53,6 +53,14 @@ def draw_trails(screen, bodies, camera, width, height):
         # Process all trail points
         for pos in body.trail:
             proj_x, proj_y, cam_z, scale = project_3d_to_2d(pos, camera, width, height)
+            
+            # Skip if projection failed
+            if proj_x is None or proj_y is None or cam_z is None or scale is None:
+                # Point is behind camera or invalid - end current segment
+                if len(current_segment) > 1:
+                    trail_segments.append(current_segment)
+                current_segment = []
+                continue
             
             # Check if point is behind camera or invalid
             if (not isinstance(proj_x, (int, float)) or not isinstance(proj_y, (int, float)) or 
@@ -68,10 +76,13 @@ def draw_trails(screen, bodies, camera, width, height):
         
         # Add current position
         current_proj_x, current_proj_y, current_cam_z, scale = project_3d_to_2d(body.position, camera, width, height)
-        if (isinstance(current_proj_x, (int, float)) and isinstance(current_proj_y, (int, float)) and 
-            current_cam_z > 0 and -100 <= current_proj_x <= width + 100 and 
-            -100 <= current_proj_y <= height + 100):
-            current_segment.append((int(current_proj_x), int(current_proj_y)))
+        
+        # Skip if projection failed
+        if current_proj_x is not None and current_proj_y is not None and current_cam_z is not None:
+            if (isinstance(current_proj_x, (int, float)) and isinstance(current_proj_y, (int, float)) and 
+                current_cam_z > 0 and -100 <= current_proj_x <= width + 100 and 
+                -100 <= current_proj_y <= height + 100):
+                current_segment.append((int(current_proj_x), int(current_proj_y)))
         
         # Add final segment if it has points
         if len(current_segment) > 1:
@@ -102,6 +113,11 @@ def draw_bodies(screen, bodies, camera, width, height):
         cam_z = np.dot(relative_pos, forward)
         
         proj_x, proj_y, _, scale = project_3d_to_2d(body.position, camera, width, height)
+        
+        # Skip if projection failed
+        if proj_x is None or proj_y is None or scale is None:
+            continue
+            
         body_renders.append((cam_z, body, proj_x, proj_y, scale))
     
     # Sort by z-depth (furthest first)
@@ -119,7 +135,7 @@ def draw_bodies(screen, bodies, camera, width, height):
         pygame.draw.circle(screen, body.color, (int(proj_x), int(proj_y)), radius)
 
 
-def draw_ui(screen, camera, show_trails, time_multiplier, movement_speed_multiplier, width, height):
+def draw_ui(screen, camera, show_trails, show_ui, time_multiplier, movement_speed_multiplier, width, height, locked_body=None):
     """Draw user interface elements"""
     font = pygame.font.Font(None, 24)
     
@@ -127,6 +143,7 @@ def draw_ui(screen, camera, show_trails, time_multiplier, movement_speed_multipl
     pitch_deg = np.degrees(camera.pitch) % 360
     yaw_deg = np.degrees(camera.yaw) % 360
     
+    # Build instructions list
     instructions = [
         "ESC: Exit | SPACE: Pause/Resume",
         "T: Toggle Trails | R: Reset",
@@ -135,12 +152,18 @@ def draw_ui(screen, camera, show_trails, time_multiplier, movement_speed_multipl
         "Arrow Keys: Rotate View",
         "WASD: Move Camera (relative to view)",
         "Q/E: Move Forward/Backward",
+        "L: Lock to hovered planet",
         f"Trails: {'ON' if show_trails else 'OFF'}",
         f"Time: {time_multiplier:.2f}x",
         f"Move Speed: {movement_speed_multiplier:.2f}x",
         f"Position: ({camera.position[0]/1e11:.1f}, {camera.position[1]/1e11:.1f}, {camera.position[2]/1e11:.1f}) x10¹¹m",
         f"Rotation: (Pitch: {pitch_deg:.1f}°, Yaw: {yaw_deg:.1f}°)"
     ]
+    
+    # Add lock status if locked
+    if locked_body:
+        lock_info = f"LOCKED: {locked_body.name} (Press L to unlock)"
+        instructions.insert(7, lock_info)
     
     for i, text in enumerate(instructions):
         surface = font.render(text, True, WHITE)
@@ -153,6 +176,10 @@ def draw_hover_info(screen, body, camera, width, height):
     
     # Get body position and project to screen
     proj_x, proj_y, cam_z, scale = project_3d_to_2d(body.position, camera, width, height)
+    
+    # Skip if projection failed
+    if proj_x is None or proj_y is None or cam_z is None or scale is None:
+        return
     
     if not (isinstance(proj_x, (int, float)) and isinstance(proj_y, (int, float))):
         return

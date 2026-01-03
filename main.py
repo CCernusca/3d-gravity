@@ -1,7 +1,7 @@
 import pygame
 from pygame.locals import *
 from scripts.physics import Body, update_physics, FPS, TIME_MULTIPLIER
-from scripts.camera import Camera, handle_camera_input
+from scripts.camera import Camera, handle_camera_input, handle_locked_camera_input, check_hover
 from scripts.visuals import render_scene, SUN_COLOR, MERCURY_COLOR, VENUS_COLOR, EARTH_COLOR, MARS_COLOR, JUPITER_COLOR, SATURN_COLOR, URANUS_COLOR, NEPTUNE_COLOR, PLUTO_COLOR
 import numpy as np
 
@@ -63,6 +63,7 @@ def main():
     show_ui = True  # Toggle for UI instructions
     time_multiplier = TIME_MULTIPLIER
     movement_speed_multiplier = 1.0  # For adjustable camera movement speed
+    locked_body = None  # Camera lock target
     running = True
     
     while running:
@@ -84,6 +85,10 @@ def main():
                     show_trails = not show_trails
                 elif event.key == K_c:
                     show_ui = not show_ui
+                elif event.key == K_l:
+                    # Lock camera to hovered body or unlock
+                    hovered_body = check_hover(pygame.mouse.get_pos(), bodies, camera, current_width, current_height)
+                    locked_body = hovered_body if hovered_body else None
                 elif event.key == K_r:
                     # Reset simulation
                     bodies = create_solar_system()
@@ -104,14 +109,33 @@ def main():
         
         # Handle continuous input
         keys = pygame.key.get_pressed()
-        handle_camera_input(camera, keys, movement_speed_multiplier)
+        if locked_body:
+            # When locked, only allow orbital movement (WASD) and zoom (QE)
+            handle_locked_camera_input(camera, keys, movement_speed_multiplier, locked_body)
+        else:
+            # Normal camera controls when not locked
+            handle_camera_input(camera, keys, movement_speed_multiplier)
         
         # Update physics
         if not paused:
             update_physics(bodies, time_multiplier)
         
+        # Update camera lock
+        if locked_body:
+            # Calculate camera movement to follow locked body
+            if not hasattr(camera, 'lock_offset'):
+                # Initialize lock offset when first locking
+                camera.lock_offset = camera.position - locked_body.position
+            
+            # Move camera with locked body
+            camera.position = locked_body.position + camera.lock_offset
+        else:
+            # Clear lock offset when not locked
+            if hasattr(camera, 'lock_offset'):
+                delattr(camera, 'lock_offset')
+        
         # Render
-        render_scene(screen, bodies, camera, show_trails, show_ui, time_multiplier, movement_speed_multiplier, current_width, current_height)
+        render_scene(screen, bodies, camera, show_trails, show_ui, time_multiplier, movement_speed_multiplier, current_width, current_height, locked_body)
         
         # Update display
         pygame.display.flip()

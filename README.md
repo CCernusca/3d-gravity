@@ -30,6 +30,12 @@ A realistic 3D solar system simulation with accurate gravitational physics, orbi
 - **Depth-based rendering** - Proper occlusion of distant objects
 - **Adjustable movement speed** - Control camera speed independently (0.1x to 10x)
 - **Intuitive controls** - Global yaw + local pitch rotation
+- **Resizable window** - Dynamic window sizing with centered view preservation
+- **Planet locking system** - Lock camera to any planet for orbital tracking
+- **Orbital movement** - WASD orbits around locked planet
+- **Automatic tracking** - Camera always points at locked planet
+
+![Image of locked view of Jupiter](assets/demo-8.png)
 
 ### **Visual Features**
 
@@ -59,6 +65,7 @@ A realistic 3D solar system simulation with accurate gravitational physics, orbi
 - **`WASD`** - Move camera relative to view direction
 - **`Q/E`** - Move forward/backward along camera view
 - **`.` / `,`** - Adjust camera movement speed (0.1x to 10x)
+- **`L`** - Lock camera to hovered planet (press again to unlock)
 - **`ESC`** - Exit simulation
 
 ### **Display Controls**
@@ -132,9 +139,11 @@ python main.py
 1. Run `python main.py` from project root
 2. Use `ESC` to exit anytime
 3. Press `C` to toggle UI for clean viewing
-4. Experiment with time controls (`+/-`) to see orbital evolution
-5. Navigate with `WASD + Q/E + Arrow keys` to explore the solar system
-6. Resize window dynamically while maintaining centered view
+4. Hover over planets to see detailed information
+5. Press `L` while hovering to lock camera to planet
+6. Experiment with time controls (`+/-`) to see orbital evolution
+7. Navigate with `WASD + Q/E + Arrow keys` to explore the solar system
+8. Resize window dynamically while maintaining centered view
 
 ## Technical Details
 

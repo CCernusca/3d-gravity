@@ -1,3 +1,4 @@
+import pygame
 import numpy as np
 from pygame.locals import *
 
@@ -111,17 +112,29 @@ def project_3d_to_2d(pos_3d, camera, width, height):
     cam_y = np.dot(relative_pos, up)
     cam_z = np.dot(relative_pos, forward)
     
-    # Perspective projection
+    # Perspective projection with safety checks
     if cam_z <= 1e8:  # Prevent division by zero (much smaller threshold)
         cam_z = 1e8
+    
+    # Check for NaN values and handle them
+    if not np.isfinite(cam_x) or not np.isfinite(cam_y) or not np.isfinite(cam_z):
+        return None, None, None, None
     
     # Field of view based scaling
     fov_factor = 500.0  # Adjust this for zoom level
     scale = fov_factor / cam_z
     
+    # Check scale for NaN or infinite values
+    if not np.isfinite(scale):
+        return None, None, None, None
+    
     # Project to screen coordinates
     screen_x = int(width / 2 + cam_x * scale)
     screen_y = int(height / 2 - cam_y * scale)
+    
+    # Final check for valid screen coordinates
+    if not np.isfinite(screen_x) or not np.isfinite(screen_y):
+        return None, None, None, None
     
     return screen_x, screen_y, cam_z, scale
 
@@ -132,6 +145,10 @@ def check_hover(mouse_pos, bodies, camera, width, height):
     
     for body in bodies:
         proj_x, proj_y, cam_z, scale = project_3d_to_2d(body.position, camera, width, height)
+        
+        # Skip if projection failed
+        if proj_x is None or proj_y is None or cam_z is None or scale is None:
+            continue
         
         # Check if projection is valid and body is visible
         if (isinstance(proj_x, (int, float)) and isinstance(proj_y, (int, float)) and
@@ -147,6 +164,87 @@ def check_hover(mouse_pos, bodies, camera, width, height):
                 return body
     
     return None
+
+
+def handle_locked_camera_input(camera, keys, movement_speed_multiplier=1.0, locked_body=None):
+    """Handle camera input when locked to a body - allows orbital movement"""
+    if not locked_body or not hasattr(camera, 'lock_offset'):
+        return
+    
+    # Calculate forward vector (from camera to planet)
+    direction_to_body = locked_body.position - camera.position
+    if np.linalg.norm(direction_to_body) > 0:
+        forward = direction_to_body / np.linalg.norm(direction_to_body)
+    else:
+        forward = np.array([0, 0, 1])
+    
+    # Calculate right and up vectors from forward
+    # Right is perpendicular to forward and world up
+    world_up = np.array([0, 1, 0])
+    right = np.cross(world_up, forward)
+    if np.linalg.norm(right) > 0:
+        right = right / np.linalg.norm(right)
+    else:
+        # If looking straight up/down, use different right vector
+        right = np.array([1, 0, 0])
+    
+    # Up is perpendicular to forward and right
+    up = np.cross(forward, right)
+    if np.linalg.norm(up) > 0:
+        up = up / np.linalg.norm(up)
+    
+    # Orbital movement (WASD) - move camera around the body
+    orbital_speed = camera.move_speed * movement_speed_multiplier
+    
+    if keys[K_w]:
+        # Move up (orbit vertically) - INVERTED
+        camera.lock_offset -= up * orbital_speed
+    if keys[K_s]:
+        # Move down (orbit vertically) - INVERTED
+        camera.lock_offset += up * orbital_speed
+    if keys[K_a]:
+        # Move left (orbit horizontally)
+        camera.lock_offset -= right * orbital_speed
+    if keys[K_d]:
+        # Move right (orbit horizontally)
+        camera.lock_offset += right * orbital_speed
+    
+    # Zoom (QE) - move closer/further from body
+    zoom_speed = camera.zoom_speed * movement_speed_multiplier
+    
+    if keys[K_q]:
+        # Zoom out (move further away)
+        direction = camera.lock_offset / np.linalg.norm(camera.lock_offset) if np.linalg.norm(camera.lock_offset) > 0 else np.array([0, 0, 1])
+        camera.lock_offset += direction * zoom_speed
+    if keys[K_e]:
+        # Zoom in (move closer)
+        direction = camera.lock_offset / np.linalg.norm(camera.lock_offset) if np.linalg.norm(camera.lock_offset) > 0 else np.array([0, 0, 1])
+        camera.lock_offset -= direction * zoom_speed
+        
+        # Prevent getting too close
+        min_distance = 1e10  # Minimum distance from body
+        current_distance = np.linalg.norm(camera.lock_offset)
+        if current_distance < min_distance or not np.isfinite(current_distance):
+            if current_distance > 0 and np.isfinite(current_distance):
+                direction_norm = camera.lock_offset / current_distance
+                camera.lock_offset = direction_norm * min_distance
+            else:
+                # Reset to safe distance if lock_offset is invalid
+                camera.lock_offset = np.array([0, 0, min_distance])
+    
+    # Calculate pitch and yaw to always look at the planet
+    if np.linalg.norm(direction_to_body) > 0:
+        # Calculate yaw from forward vector
+        yaw = np.arctan2(forward[0], forward[2])
+        
+        # Calculate pitch from forward vector
+        horizontal_dist = np.sqrt(forward[0]**2 + forward[2]**2)
+        pitch = np.arctan2(-forward[1], horizontal_dist)
+        
+        # Apply rotation to camera
+        camera.yaw = yaw
+        camera.pitch = pitch
+        camera._update_vectors()
 
 
 def handle_camera_input(camera, keys, movement_speed_multiplier=1.0):
