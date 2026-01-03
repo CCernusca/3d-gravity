@@ -1,6 +1,6 @@
 import pygame
 import numpy as np
-from scripts.camera import Camera, project_3d_to_2d, check_hover
+from scripts.camera import Camera, project_3d_to_2d, check_hover, get_planetary_coordinates
 
 # Visual constants
 BLACK = (0, 0, 0)
@@ -22,7 +22,7 @@ PLUTO_COLOR = (200, 180, 160)
 WIDTH, HEIGHT = 1000, 800
 
 
-def render_scene(screen, bodies, camera, show_trails, show_ui, time_multiplier, movement_speed_multiplier, width, height, locked_body=None):
+def render_scene(screen, bodies, camera, show_trails, show_ui, time_multiplier, movement_speed_multiplier, width, height, locked_body=None, planetary_body=None):
     """Render the entire scene"""
     screen.fill(BLACK)
     
@@ -31,7 +31,7 @@ def render_scene(screen, bodies, camera, show_trails, show_ui, time_multiplier, 
         draw_trails(screen, bodies, camera, width, height)
     
     # Draw bodies
-    draw_bodies(screen, bodies, camera, width, height)
+    draw_bodies(screen, bodies, camera, width, height, planetary_body)
     
     # Draw hover information
     mouse_pos = pygame.mouse.get_pos()
@@ -41,7 +41,7 @@ def render_scene(screen, bodies, camera, show_trails, show_ui, time_multiplier, 
     
     # Draw UI
     if show_ui:
-        draw_ui(screen, camera, show_trails, show_ui, time_multiplier, movement_speed_multiplier, width, height, locked_body)
+        draw_ui(screen, camera, show_trails, show_ui, time_multiplier, movement_speed_multiplier, width, height, locked_body, planetary_body)
 
 
 def draw_trails(screen, bodies, camera, width, height):
@@ -94,37 +94,63 @@ def draw_trails(screen, bodies, camera, width, height):
                 pygame.draw.lines(screen, body.color, False, segment, 1)
 
 
-def draw_bodies(screen, bodies, camera, width, height):
-    """Draw all celestial bodies with proper depth sorting"""
-    # Calculate depth and projection for all bodies
+def draw_bodies(screen, bodies, camera, width, height, planetary_body=None):
+    """Draw all celestial bodies with depth sorting"""
     body_renders = []
+    
     for body in bodies:
-        # Use camera vectors for depth calculation
-        relative_pos = body.position - camera.position
-        
-        # Get camera axes
-        right = camera.get_right_vector()
-        up = camera.get_up_vector()
-        forward = camera.get_forward_vector()
-        
-        # Transform to camera coordinates (dot products)
-        cam_x = np.dot(relative_pos, right)
-        cam_y = np.dot(relative_pos, up)
-        cam_z = np.dot(relative_pos, forward)
-        
-        proj_x, proj_y, _, scale = project_3d_to_2d(body.position, camera, width, height)
-        
-        # Skip if projection failed
-        if proj_x is None or proj_y is None or scale is None:
-            continue
+        # In planetary mode, always render the planetary body
+        if planetary_body and body == planetary_body:
+                # Force planetary body to render last (on top) by using maximum depth
+                body_renders.append((0, body, 0, 0, 1))  # Always on top
+        else:
+            # Normal rendering for other bodies
+            # Transform to camera space (translate)
+            relative_pos = body.position - camera.position
             
-        body_renders.append((cam_z, body, proj_x, proj_y, scale))
+            # Transform to camera space using camera vectors
+            x, y, z = relative_pos
+            
+            # Get camera axes
+            right = camera.get_right_vector()
+            up = camera.get_up_vector()
+            forward = camera.get_forward_vector()
+            
+            # Transform to camera coordinates (dot products)
+            cam_x = np.dot(relative_pos, right)
+            cam_y = np.dot(relative_pos, up)
+            cam_z = np.dot(relative_pos, forward)
+            
+            proj_x, proj_y, _, scale = project_3d_to_2d(body.position, camera, width, height)
+            
+            # Skip if projection failed
+            if proj_x is None or proj_y is None or scale is None:
+                continue
+                
+            body_renders.append((cam_z, body, proj_x, proj_y, scale))
     
     # Sort by z-depth (furthest first)
     body_renders.sort(key=lambda x: x[0], reverse=True)
     
     # Draw bodies
     for _, body, proj_x, proj_y, scale in body_renders:
+        # Special case for planetary body
+        if planetary_body and body == planetary_body:
+            # Always render planetary body with partial visibility support
+            # Get projection scale first
+            _, _, _, proj_scale = project_3d_to_2d(body.position, camera, width, height)
+            
+            if proj_scale is not None:
+                # Calculate screen space radius
+                screen_radius = max(3, int(body.radius * proj_scale))
+                
+                # Draw the filled circle if center is on screen
+                center_proj_x, center_proj_y, center_cam_z, center_scale = project_3d_to_2d(body.position, camera, width, height)
+                if center_proj_x is not None and center_proj_y is not None and center_cam_z is not None and center_scale is not None:
+                    pygame.draw.circle(screen, body.color, (int(center_proj_x), int(center_proj_y)), screen_radius)
+            # Skip normal rendering
+            continue
+            
         # Skip if projection is invalid or off-screen
         if not (isinstance(proj_x, (int, float)) and isinstance(proj_y, (int, float))):
             continue
@@ -135,13 +161,39 @@ def draw_bodies(screen, bodies, camera, width, height):
         pygame.draw.circle(screen, body.color, (int(proj_x), int(proj_y)), radius)
 
 
-def draw_ui(screen, camera, show_trails, show_ui, time_multiplier, movement_speed_multiplier, width, height, locked_body=None):
+def draw_ui(screen, camera, show_trails, show_ui, time_multiplier, movement_speed_multiplier, width, height, locked_body=None, planetary_body=None):
     """Draw user interface elements"""
     font = pygame.font.Font(None, 24)
     
-    # Convert rotation to degrees and wrap around 360
-    pitch_deg = np.degrees(camera.pitch) % 360
-    yaw_deg = np.degrees(camera.yaw) % 360
+    # Get rotation angles from vectors
+    yaw_deg, pitch_deg, roll_deg = camera.get_angles_for_display()
+    yaw_deg = np.degrees(yaw_deg) % 360
+    pitch_deg = np.degrees(pitch_deg) % 360
+    roll_deg = np.degrees(roll_deg) % 360
+    
+    # Get planetary manual rotation info if in planetary mode
+    planetary_rotation_info = ""
+    if planetary_body and hasattr(camera, 'manual_rotation'):
+        # Extract angles from manual rotation matrix for display
+        try:
+            # Convert rotation matrix to Euler angles for display
+            manual_yaw = np.arctan2(camera.manual_rotation[1, 0], camera.manual_rotation[0, 0])
+            manual_pitch = np.arcsin(-camera.manual_rotation[2, 0])
+            manual_roll = np.arctan2(camera.manual_rotation[2, 1], camera.manual_rotation[2, 2])
+            
+            manual_yaw_deg = np.degrees(manual_yaw) % 360
+            manual_pitch_deg = np.degrees(manual_pitch) % 360
+            manual_roll_deg = np.degrees(manual_roll) % 360
+            planetary_rotation_info = f"Manual: (Yaw: {manual_yaw_deg:.1f}°, Pitch: {manual_pitch_deg:.1f}°, Roll: {manual_roll_deg:.1f}°)"
+        except:
+            planetary_rotation_info = "Manual: (Vector-based rotation)"
+    
+    # Get planetary coordinates if in planetary mode
+    coord_info = ""
+    if planetary_body:
+        latitude, longitude, altitude, distance = get_planetary_coordinates(camera, planetary_body)
+        if latitude is not None:
+            coord_info = f"Lat: {latitude:.2f}° | Lon: {longitude:.2f}° | Alt: {altitude/1e6:.1f}Mm"
     
     # Build instructions list
     instructions = [
@@ -153,17 +205,32 @@ def draw_ui(screen, camera, show_trails, show_ui, time_multiplier, movement_spee
         "WASD: Move Camera (relative to view)",
         "Q/E: Move Forward/Backward",
         "L: Lock to hovered planet",
+        "P: Planetary mode (fixed distance)",
         f"Trails: {'ON' if show_trails else 'OFF'}",
         f"Time: {time_multiplier:.2f}x",
         f"Move Speed: {movement_speed_multiplier:.2f}x",
         f"Position: ({camera.position[0]/1e11:.1f}, {camera.position[1]/1e11:.1f}, {camera.position[2]/1e11:.1f}) x10¹¹m",
-        f"Rotation: (Pitch: {pitch_deg:.1f}°, Yaw: {yaw_deg:.1f}°)"
+        f"Rotation: (Pitch: {pitch_deg:.1f}°, Yaw: {yaw_deg:.1f}°, Roll: {roll_deg:.1f}°)"
     ]
     
-    # Add lock status if locked
+    # Add planetary coordinates if available
+    if coord_info:
+        instructions.insert(-2, f"Planetary: {coord_info}")
+    
+    # Add planetary manual rotation if available
+    if planetary_rotation_info:
+        instructions.insert(-2, planetary_rotation_info)
+    
+    # Add mode information
     if locked_body:
-        lock_info = f"LOCKED: {locked_body.name} (Press L to unlock)"
-        instructions.insert(7, lock_info)
+        instructions.append(f"LOCKED to: {locked_body.name}")
+    elif planetary_body:
+        instructions.append(f"PLANETARY mode: {planetary_body.name}")
+    
+    # Add planetary mode status if in planetary mode
+    if planetary_body:
+        planetary_info = f"PLANETARY: {planetary_body.name} (Press P to exit)"
+        instructions.insert(9, planetary_info)
     
     for i, text in enumerate(instructions):
         surface = font.render(text, True, WHITE)

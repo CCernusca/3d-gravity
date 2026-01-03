@@ -1,7 +1,7 @@
 import pygame
 from pygame.locals import *
 from scripts.physics import Body, update_physics, FPS, TIME_MULTIPLIER
-from scripts.camera import Camera, handle_camera_input, handle_locked_camera_input, check_hover
+from scripts.camera import Camera, handle_camera_input, handle_locked_camera_input, handle_planetary_input, check_hover
 from scripts.visuals import render_scene, SUN_COLOR, MERCURY_COLOR, VENUS_COLOR, EARTH_COLOR, MARS_COLOR, JUPITER_COLOR, SATURN_COLOR, URANUS_COLOR, NEPTUNE_COLOR, PLUTO_COLOR
 import numpy as np
 
@@ -64,6 +64,7 @@ def main():
     time_multiplier = TIME_MULTIPLIER
     movement_speed_multiplier = 1.0  # For adjustable camera movement speed
     locked_body = None  # Camera lock target
+    planetary_body = None  # Planetary mode target
     running = True
     
     while running:
@@ -89,6 +90,21 @@ def main():
                     # Lock camera to hovered body or unlock
                     hovered_body = check_hover(pygame.mouse.get_pos(), bodies, camera, current_width, current_height)
                     locked_body = hovered_body if hovered_body else None
+                    # Clear planetary mode when locking
+                    planetary_body = None
+                elif event.key == K_p:
+                    # Planetary mode: fix distance to hovered body
+                    hovered_body = check_hover(pygame.mouse.get_pos(), bodies, camera, current_width, current_height)
+                    planetary_body = hovered_body if hovered_body else None
+                    # Clear lock mode when entering planetary mode
+                    locked_body = None
+                    # Clear planetary attributes
+                    for attr in ['planetary_initial_forward', 'planetary_initial_anchor', 'planetary_initial_pitch', 'planetary_initial_yaw']:
+                        if hasattr(camera, attr):
+                            delattr(camera, attr)
+                    if not locked_body:
+                        # Reset all rotation
+                        camera.reset_rotation()
                 elif event.key == K_r:
                     # Reset simulation
                     bodies = create_solar_system()
@@ -112,13 +128,25 @@ def main():
         if locked_body:
             # When locked, only allow orbital movement (WASD) and zoom (QE)
             handle_locked_camera_input(camera, keys, movement_speed_multiplier, locked_body)
+        elif planetary_body:
+            # Planetary mode: normal rotation + perpendicular movement
+            handle_planetary_input(camera, keys, movement_speed_multiplier, planetary_body)
         else:
             # Normal camera controls when not locked
             handle_camera_input(camera, keys, movement_speed_multiplier)
         
         # Update physics
         if not paused:
+            # Store planetary body position before physics update
+            if planetary_body:
+                old_planetary_position = planetary_body.position.copy()
+            
             update_physics(bodies, time_multiplier)
+            
+            # Apply planetary body movement to camera
+            if planetary_body:
+                planetary_movement = planetary_body.position - old_planetary_position
+                camera.position += planetary_movement
         
         # Update camera lock
         if locked_body:
@@ -129,13 +157,17 @@ def main():
             
             # Move camera with locked body
             camera.position = locked_body.position + camera.lock_offset
+        elif planetary_body:
+            # Planetary mode: handle movement in handle_planetary_input
+            # Don't override camera position here - let handle_planetary_input manage it
+            pass
         else:
             # Clear lock offset when not locked
             if hasattr(camera, 'lock_offset'):
                 delattr(camera, 'lock_offset')
         
         # Render
-        render_scene(screen, bodies, camera, show_trails, show_ui, time_multiplier, movement_speed_multiplier, current_width, current_height, locked_body)
+        render_scene(screen, bodies, camera, show_trails, show_ui, time_multiplier, movement_speed_multiplier, current_width, current_height, locked_body, planetary_body)
         
         # Update display
         pygame.display.flip()

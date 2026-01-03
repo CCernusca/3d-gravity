@@ -11,7 +11,7 @@ A realistic 3D solar system simulation with accurate gravitational physics, orbi
 - **Complete planetary system** with all 8 planets + Pluto
 - **Accurate orbital inclinations** - Mercury (7.0°), Venus (3.4°), Earth (0°), Mars (1.9°), Jupiter (1.3°), Saturn (2.5°), Uranus (0.8°), Neptune (1.8°), Pluto (17.2°)
 - **Real astronomical data** - Actual masses, distances, and orbital velocities
-- **Proper scale representation** - Bodies sized for visibility while maintaining proportions
+- **Visibility-adjusted scale** - Bodies sized for visibility
 
 ![Pluto at the highest point of his inclined orbit](assets/demo-6.png)
 *Can you find the missing planet?*
