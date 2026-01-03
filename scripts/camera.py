@@ -123,7 +123,30 @@ def project_3d_to_2d(pos_3d, camera, width, height):
     screen_x = int(width / 2 + cam_x * scale)
     screen_y = int(height / 2 - cam_y * scale)
     
-    return screen_x, screen_y, scale
+    return screen_x, screen_y, cam_z, scale
+
+
+def check_hover(mouse_pos, bodies, camera, width, height):
+    """Check if mouse is hovering over any body"""
+    mouse_x, mouse_y = mouse_pos
+    
+    for body in bodies:
+        proj_x, proj_y, cam_z, scale = project_3d_to_2d(body.position, camera, width, height)
+        
+        # Check if projection is valid and body is visible
+        if (isinstance(proj_x, (int, float)) and isinstance(proj_y, (int, float)) and
+            cam_z > 0 and -100 <= proj_x <= width + 100 and 
+            -100 <= proj_y <= height + 100):
+            
+            # Calculate screen radius for hover detection
+            screen_radius = max(10, int(body.radius * scale))
+            
+            # Check if mouse is within body radius
+            distance = ((mouse_x - proj_x) ** 2 + (mouse_y - proj_y) ** 2) ** 0.5
+            if distance <= screen_radius:
+                return body
+    
+    return None
 
 
 def handle_camera_input(camera, keys, movement_speed_multiplier=1.0):

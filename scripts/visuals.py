@@ -1,6 +1,6 @@
 import pygame
 import numpy as np
-from scripts.camera import Camera, project_3d_to_2d
+from scripts.camera import Camera, project_3d_to_2d, check_hover
 
 # Visual constants
 BLACK = (0, 0, 0)
@@ -33,6 +33,12 @@ def render_scene(screen, bodies, camera, show_trails, show_ui, time_multiplier, 
     # Draw bodies
     draw_bodies(screen, bodies, camera, width, height)
     
+    # Draw hover information
+    mouse_pos = pygame.mouse.get_pos()
+    hovered_body = check_hover(mouse_pos, bodies, camera, width, height)
+    if hovered_body:
+        draw_hover_info(screen, hovered_body, camera, width, height)
+    
     # Draw UI
     if show_ui:
         draw_ui(screen, camera, show_trails, time_multiplier, movement_speed_multiplier, width, height)
@@ -46,7 +52,7 @@ def draw_trails(screen, bodies, camera, width, height):
         
         # Process all trail points
         for pos in body.trail:
-            proj_x, proj_y, cam_z = project_3d_to_2d(pos, camera, width, height)
+            proj_x, proj_y, cam_z, scale = project_3d_to_2d(pos, camera, width, height)
             
             # Check if point is behind camera or invalid
             if (not isinstance(proj_x, (int, float)) or not isinstance(proj_y, (int, float)) or 
@@ -61,7 +67,7 @@ def draw_trails(screen, bodies, camera, width, height):
                 current_segment.append((int(proj_x), int(proj_y)))
         
         # Add current position
-        current_proj_x, current_proj_y, current_cam_z = project_3d_to_2d(body.position, camera, width, height)
+        current_proj_x, current_proj_y, current_cam_z, scale = project_3d_to_2d(body.position, camera, width, height)
         if (isinstance(current_proj_x, (int, float)) and isinstance(current_proj_y, (int, float)) and 
             current_cam_z > 0 and -100 <= current_proj_x <= width + 100 and 
             -100 <= current_proj_y <= height + 100):
@@ -95,7 +101,7 @@ def draw_bodies(screen, bodies, camera, width, height):
         cam_y = np.dot(relative_pos, up)
         cam_z = np.dot(relative_pos, forward)
         
-        proj_x, proj_y, scale = project_3d_to_2d(body.position, camera, width, height)
+        proj_x, proj_y, _, scale = project_3d_to_2d(body.position, camera, width, height)
         body_renders.append((cam_z, body, proj_x, proj_y, scale))
     
     # Sort by z-depth (furthest first)
@@ -139,3 +145,57 @@ def draw_ui(screen, camera, show_trails, time_multiplier, movement_speed_multipl
     for i, text in enumerate(instructions):
         surface = font.render(text, True, WHITE)
         screen.blit(surface, (10, 10 + i * 25))
+
+
+def draw_hover_info(screen, body, camera, width, height):
+    """Draw hover information for a celestial body"""
+    font = pygame.font.Font(None, 20)
+    
+    # Get body position and project to screen
+    proj_x, proj_y, cam_z, scale = project_3d_to_2d(body.position, camera, width, height)
+    
+    if not (isinstance(proj_x, (int, float)) and isinstance(proj_y, (int, float))):
+        return
+    
+    # Calculate screen radius for halo
+    screen_radius = max(7, int(body.radius * scale))
+    
+    # Draw white halo
+    pygame.draw.circle(screen, (255, 255, 255), (int(proj_x), int(proj_y)), screen_radius + 3, 2)
+    
+    # Prepare information text
+    info_lines = [
+        f"Name: {body.name}",
+        f"Mass: {body.mass:.2e} kg",
+        f"Radius: {body.radius/1e6:.1f} Mm",
+        f"Position: ({body.position[0]/1e9:.1f}, {body.position[1]/1e9:.1f}, {body.position[2]/1e9:.1f}) Gm",
+        f"Velocity: ({body.velocity[0]/1000:.1f}, {body.velocity[1]/1000:.1f}, {body.velocity[2]/1000:.1f}) km/s"
+    ]
+    
+    # Render text background for better visibility
+    text_surfaces = []
+    max_text_width = 0
+    
+    for i, line in enumerate(info_lines):
+        surface = font.render(line, True, WHITE)
+        text_surfaces.append(surface)
+        max_text_width = max(max_text_width, surface.get_width())
+    
+    # Position text above the body
+    text_x = int(proj_x) - max_text_width // 2
+    text_y = int(proj_y) - screen_radius - 30 - len(info_lines) * 22
+    
+    # Draw background rectangle
+    padding = 8
+    bg_rect = pygame.Rect(
+        text_x - padding,
+        text_y - padding,
+        max_text_width + padding * 2,
+        len(info_lines) * 22 + padding * 2
+    )
+    pygame.draw.rect(screen, (0, 0, 0, 180), bg_rect)
+    pygame.draw.rect(screen, WHITE, bg_rect, 1)
+    
+    # Draw text
+    for i, surface in enumerate(text_surfaces):
+        screen.blit(surface, (text_x, text_y + i * 22))

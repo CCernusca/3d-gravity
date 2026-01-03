@@ -38,6 +38,11 @@ A realistic 3D solar system simulation with accurate gravitational physics, orbi
 - **Gap-free rendering** - Trails connect smoothly to current positions
 - **Depth-sorted rendering** - Proper 3D layering
 - **Color-coded planets** - Realistic planetary colors
+- **Interactive hover** - Mouse over planets shows detailed information
+- **White halo effect** - Visual feedback for hovered bodies
+- **Information panel** - Name, mass, radius, position, velocity display
+
+![Image of Earth being hovered over, showing the information panel](assets/demo-7.png)
 
 ## Controls
 
@@ -60,6 +65,7 @@ A realistic 3D solar system simulation with accurate gravitational physics, orbi
 
 - **`T`** - Toggle orbital trails on/off
 - **`C`** - Toggle UI instructions on/off
+- **`Mouse hover`** - Over planets to see detailed information
 - **UI shows** - Current time multiplier, movement speed, camera position, rotation
 
 ![Demo image of Sun, Earth, Venus and Mars with active UI](assets/demo-5.png)
