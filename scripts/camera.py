@@ -514,24 +514,6 @@ def handle_planetary_input(camera, keys, movement_speed_multiplier=1.0, planetar
         # The planetary coordinate system should remain stable relative to the planet
         # Only the camera position should change, not the reference frame
     
-    # W/S: Rotate camera position around right vector (vertical movement)
-    if keys[K_w] or keys[K_s]:
-        rotation_dir = -1 if keys[K_s] else 1  # S=negative, W=positive
-        angle = angular_speed * rotation_dir
-        
-        # Rotate position around right vector
-        relative_pos = camera.position - planetary_body.position
-        new_relative_pos = _rotate_vector_around_axis(
-            relative_pos, camera.planetary_right, angle
-        )
-        camera.position = planetary_body.position + new_relative_pos
-        
-        # Rotate planetary coordinate system
-        camera.planetary_up = _rotate_vector_around_axis(
-            camera.planetary_up, camera.planetary_right, angle
-        )
-        camera.planetary_up = camera.planetary_up / np.linalg.norm(camera.planetary_up)
-    
     # === SECTION 3: MANUAL ROTATION ===
     # Apply arrow key rotations to manual rotation matrix
     # IMPORTANT: Apply rotations in consistent order to avoid unwanted roll
@@ -551,19 +533,11 @@ def handle_planetary_input(camera, keys, movement_speed_multiplier=1.0, planetar
         rotation_dir = -1 if keys[K_UP] else 1
         angle = angular_speed * rotation_dir
         
-        # CRITICAL FIX: Use camera's CURRENT forward vector for local right calculation
-        # The local right should be perpendicular to the camera's current forward and up
-        current_forward = camera.forward  # Use camera's actual current forward
-        current_up = camera.up  # Use camera's actual current up
-        
-        # Calculate local right as cross product of current up and current forward
-        # This gives the true camera-local right vector
-        local_right = np.cross(current_up, current_forward)
-        if np.linalg.norm(local_right) > 0:
-            local_right = local_right / np.linalg.norm(local_right)
-        else:
-            # Fallback: use planetary_right if calculation fails
-            local_right = camera.planetary_right
+        # CRITICAL FIX: Use planetary_right for pitch rotation to avoid instability
+        # When camera is heavily yawed, current_forward and current_up become nearly parallel
+        # Their cross product (local_right) becomes unstable, causing pitch issues
+        # planetary_right remains stable regardless of camera orientation
+        local_right = camera.planetary_right
         
         pitch_matrix = _rotation_matrix_from_axis_angle(local_right, angle)
     
@@ -572,7 +546,7 @@ def handle_planetary_input(camera, keys, movement_speed_multiplier=1.0, planetar
     combined_rotation = pitch_matrix @ yaw_matrix
     camera.manual_rotation = combined_rotation @ camera.manual_rotation
     
-    # === SECTION 4: FINAL ORIENTATION ===
+    # === SECTION 4: FINAL ORIENTATION (moved here to prevent wobble) ===
     # Calculate base forward vector from planetary coordinate system
     base_forward = np.cross(camera.planetary_right, camera.planetary_up)
     if np.linalg.norm(base_forward) > 0:
@@ -580,8 +554,8 @@ def handle_planetary_input(camera, keys, movement_speed_multiplier=1.0, planetar
     else:
         base_forward = np.array([0, 0, 1])
     
-    # Apply manual rotation to base vectors
-    # CRITICAL FIX: Apply rotation to all vectors, then re-orthogonalize
+    # CRITICAL FIX: Apply manual rotation to base vectors
+    # This should be the ONLY place manual_rotation is applied
     final_forward = camera.manual_rotation @ base_forward
     final_right = camera.manual_rotation @ camera.planetary_right
     final_up = camera.manual_rotation @ camera.planetary_up  # Apply rotation to up too!
@@ -603,16 +577,141 @@ def handle_planetary_input(camera, keys, movement_speed_multiplier=1.0, planetar
     camera.right = final_right
     camera.up = final_up
     
-    # === SECTION 5: DISTANCE CORRECTION ===
+    # === SECTION 5: W/S MOVEMENT (moved after final orientation) ===
+    # Move camera position along planetary forward vector (north/south movement)
+    if keys[K_w] or keys[K_s]:
+        # CRITICAL FIX: Use camera's CURRENT facing direction, not base_forward
+        # The camera vectors are already updated from final_orientation
+        current_facing = camera.forward  # Use the already-updated camera forward
+        
+        # CRITICAL FIX: Project view direction onto tangent plane correctly
+        # The tangent plane is defined by planetary_up (normal to surface)
+        # We want the component of camera.forward that lies in this plane
+        # Formula: projected = original - (original·normal) * normal
+        view_direction = camera.forward
+        projection_scalar = np.dot(view_direction, camera.planetary_up)
+        movement_direction = view_direction - projection_scalar * camera.planetary_up
+        
+        # Normalize the movement direction
+        if np.linalg.norm(movement_direction) > 1e-6:
+            movement_direction = movement_direction / np.linalg.norm(movement_direction)
+        else:
+            # Fallback: use planetary_right if projection fails
+            movement_direction = camera.planetary_right
+        
+        # DEBUG: Comprehensive analysis of the issue
+        print("=== COMPREHENSIVE MOVEMENT DEBUG ===")
+        print(f"Current facing: {current_facing}")
+        print(f"Planetary up: {camera.planetary_up}")
+        print(f"Projection scalar: {projection_scalar:.6f}")
+        print(f"Movement direction: {movement_direction}")
+        
+        # Check alignment
+        facing_to_movement = np.dot(current_facing, movement_direction)
+        print(f"Facing to movement alignment: {facing_to_movement:.6f}")
+        
+        # Check if movement direction is tangent to surface
+        tangent_check = np.dot(movement_direction, camera.planetary_up)
+        print(f"Movement tangent check (should be ~0): {tangent_check:.6f}")
+        
+        # Check if movement direction is parallel to planetary forward
+        base_forward = np.cross(camera.planetary_right, camera.planetary_up)
+        if np.linalg.norm(base_forward) > 0:
+            base_forward = base_forward / np.linalg.norm(base_forward)
+        else:
+            base_forward = np.array([0, 0, 1])
+        
+        forward_alignment = np.dot(movement_direction, base_forward)
+        print(f"Movement to planetary forward alignment: {forward_alignment:.6f}")
+        
+        # Check rotation axis
+        radial_vector = camera.position - planetary_body.position
+        if np.linalg.norm(radial_vector) > 0:
+            radial_vector = radial_vector / np.linalg.norm(radial_vector)
+        else:
+            radial_vector = np.array([0, 1, 0])  # Fallback
+        
+        rotation_axis = np.cross(camera.planetary_up, movement_direction)
+        rotation_axis_magnitude = np.linalg.norm(rotation_axis)
+        print(f"Rotation axis: {rotation_axis}")
+        print(f"Rotation axis magnitude: {rotation_axis_magnitude:.6f}")
+        
+        # Check what happens with old method for comparison
+        old_rotation_axis = np.cross(radial_vector, movement_direction)
+        old_rotation_axis_magnitude = np.linalg.norm(old_rotation_axis)
+        print(f"OLD rotation axis magnitude: {old_rotation_axis_magnitude:.6f}")
+        
+        # Check movement distance
+        movement_dir = 1 if keys[K_w] else -1  # W=positive, S=negative
+        movement_distance = angular_speed * movement_dir
+        print(f"Movement distance: {movement_distance:.6f}")
+        
+        print("=== END DEBUG ===\n")
+        
+        # Move along current facing direction (not base_forward!)
+        movement_dir = 1 if keys[K_w] else -1  # W=positive, S=negative
+        movement_distance = angular_speed * movement_dir
+        
+        # Since we're on a sphere, we need to move along the great circle
+        # This is equivalent to rotating the position around the axis perpendicular to both planetary_up and movement direction
+        radial_vector = camera.position - planetary_body.position
+        if np.linalg.norm(radial_vector) > 0:
+            radial_vector = radial_vector / np.linalg.norm(radial_vector)
+        else:
+            radial_vector = np.array([0, 1, 0])  # Fallback
+        
+        # Calculate rotation axis (perpendicular to planetary_up and movement directions)
+        # CRITICAL FIX: Use planetary_up, not radial_vector, to avoid axis collapse
+        # When movement_direction aligns with radial_vector, cross product becomes small
+        # But planetary_up is always perpendicular to radial_vector, ensuring stable rotation
+        rotation_axis = np.cross(camera.planetary_up, movement_direction)
+        if np.linalg.norm(rotation_axis) > 0:
+            rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
+        else:
+            # If movement is parallel to planetary_up (unlikely), use planetary_right as fallback
+            rotation_axis = camera.planetary_right
+        
+        # Rotate position around this axis to move along movement direction
+        relative_pos = camera.position - planetary_body.position
+        new_relative_pos = _rotate_vector_around_axis(
+            relative_pos, rotation_axis, movement_distance
+        )
+        camera.position = planetary_body.position + new_relative_pos
+        
+        # CRITICAL FIX: Only update planetary_up, NOT planetary_right
+        # planetary_right should remain stable to prevent coordinate system flipping
+        new_anchor_vector = planetary_body.position - camera.position
+        if np.linalg.norm(new_anchor_vector) > 0:
+            new_anchor_normalized = new_anchor_vector / np.linalg.norm(new_anchor_vector)
+            camera.planetary_up = -new_anchor_normalized
+            if np.linalg.norm(camera.planetary_up) > 0:
+                camera.planetary_up = camera.planetary_up / np.linalg.norm(camera.planetary_up)
+            else:
+                camera.planetary_up = np.array([0, 1, 0])
+            
+            # DO NOT UPDATE planetary_right - keep it stable!
+            # This prevents the coordinate system from flipping
+    
+    # === SECTION 6: DISTANCE CORRECTION ===
     # Fix camera distance to planetary body
+    # CRITICAL FIX: Only apply small correction, don't override movement
     new_anchor_vector = planetary_body.position - camera.position
     new_distance = np.linalg.norm(new_anchor_vector)
     
     if new_distance > 0:
-        # Fix distance to radius + 1
+        # Fix distance to radius + 1e9 with gentle correction
         target_distance = planetary_body.radius + 1e9
-        new_anchor_normalized = new_anchor_vector / new_distance
-        camera.position = planetary_body.position - new_anchor_normalized * target_distance
+        distance_error = new_distance - target_distance
+        
+        # Only correct if distance error is significant (> 1% of target)
+        if abs(distance_error) > target_distance * 0.01:
+            # Apply gentle correction factor to avoid snap-back wobble
+            correction_factor = 0.1  # Only correct 10% of error per frame
+            correction_amount = distance_error * correction_factor
+            
+            new_anchor_normalized = new_anchor_vector / new_distance
+            corrected_position = planetary_body.position - new_anchor_normalized * (new_distance - correction_amount)
+            camera.position = corrected_position
 
 
 def _rotation_matrix_from_axis_angle(axis, angle):
