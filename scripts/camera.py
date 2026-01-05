@@ -737,6 +737,68 @@ def handle_planetary_input(camera, keys, movement_speed_multiplier=1.0, planetar
             # DO NOT UPDATE planetary_right - keep it stable!
             # This prevents the coordinate system from flipping
     
+    # === SECTION 5.5: A/D STRAFING MOVEMENT ===
+    # Move along camera's local right direction, projected onto tangent plane
+    if keys[K_a] or keys[K_d]:
+        # Get camera's local right vector
+        if hasattr(camera, 'right') and np.linalg.norm(camera.right) > 1e-6:
+            local_right = camera.right
+        else:
+            # Fallback: calculate from forward and planetary_up
+            local_right = np.cross(camera.forward, camera.planetary_up)
+            if np.linalg.norm(local_right) > 1e-6:
+                local_right = local_right / np.linalg.norm(local_right)
+            else:
+                # Final fallback: use planetary_right
+                local_right = camera.planetary_right
+        
+        # Project local_right onto tangent plane (perpendicular to planetary_up)
+        # This ensures strafing stays tangent to the planet surface
+        strafe_direction = local_right - np.dot(local_right, camera.planetary_up) * camera.planetary_up
+        if np.linalg.norm(strafe_direction) > 1e-6:
+            strafe_direction = strafe_direction / np.linalg.norm(strafe_direction)
+        else:
+            # If projection failed, use planetary_right as fallback
+            strafe_direction = camera.planetary_right
+        
+        # Calculate rotation axis for strafing movement
+        # Similar to W/S movement, but using strafe_direction instead of movement_direction
+        rotation_axis = np.cross(camera.planetary_up, strafe_direction)
+        if np.linalg.norm(rotation_axis) > 0:
+            rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
+        else:
+            # If strafe is parallel to planetary_up (unlikely), use planetary_forward as fallback
+            planetary_forward = np.cross(camera.planetary_right, camera.planetary_up)
+            if np.linalg.norm(planetary_forward) > 0:
+                planetary_forward = planetary_forward / np.linalg.norm(planetary_forward)
+            else:
+                planetary_forward = np.array([0, 0, 1])
+            rotation_axis = planetary_forward
+        
+        # Calculate strafing movement distance
+        strafe_dir = 1 if keys[K_d] else -1  # D=positive (right), A=negative (left)
+        strafe_distance = angular_speed * strafe_dir
+        
+        # Rotate position around this axis to strafe along strafe_direction
+        relative_pos = camera.position - planetary_body.position
+        new_relative_pos = _rotate_vector_around_axis(
+            relative_pos, rotation_axis, strafe_distance
+        )
+        camera.position = planetary_body.position + new_relative_pos
+        
+        # Update planetary_up after strafing (same as W/S movement)
+        new_anchor_vector = planetary_body.position - camera.position
+        if np.linalg.norm(new_anchor_vector) > 0:
+            new_anchor_normalized = new_anchor_vector / np.linalg.norm(new_anchor_vector)
+            camera.planetary_up = -new_anchor_normalized
+            if np.linalg.norm(camera.planetary_up) > 0:
+                camera.planetary_up = camera.planetary_up / np.linalg.norm(camera.planetary_up)
+            else:
+                camera.planetary_up = np.array([0, 1, 0])
+            
+            # DO NOT UPDATE planetary_right - keep it stable!
+            # This prevents the coordinate system from flipping
+    
     # === SECTION 6: DISTANCE CORRECTION ===
     # Fix camera distance to planetary body
     # CRITICAL FIX: Only apply small correction, don't override movement

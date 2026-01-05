@@ -103,22 +103,43 @@ def main():
                         if hasattr(camera, attr):
                             delattr(camera, attr)
                     if not locked_body and planetary_body:
-                        # CRITICAL FIX: Position camera at north pole and align with planetary up
-                        # North pole is at body.position + (0, radius, 0) in world coordinates
+                        # CRITICAL FIX: Position camera at north pole and set up orientation
+                        # North pole is at body.position + (0, radius + offset, 0) in world coordinates
                         north_pole_offset = np.array([0.0, planetary_body.radius + 7e7, 0.0])
                         camera.position = planetary_body.position + north_pole_offset
                         
-                        # Align camera's up with planetary up (away from planet center)
-                        planetary_up_vector = np.array([0.0, 1.0, 0.0])  # Up at north pole
-                        camera.align_up_to_vector(planetary_up_vector)
+                        # Set camera orientation directly for north pole view
+                        # At north pole: up points away from planet, forward points down, right points east
+                        planetary_up_vector = np.array([0.0, 1.0, 0.0])  # Up at north pole (world Y)
+                        camera.up = planetary_up_vector / np.linalg.norm(planetary_up_vector)  # Normalize
+                        camera.forward = -planetary_up_vector  # Look down toward planet center
+                        camera.forward = camera.forward / np.linalg.norm(camera.forward)  # Normalize
                         
-                        # Point camera toward planet center (looking down from north pole)
-                        camera.forward = -planetary_up_vector
-                        camera.forward = camera.forward / np.linalg.norm(camera.forward)
-                        
-                        # Recalculate right vector to maintain orthogonal system
+                        # Calculate right vector to maintain orthogonal system (cross product order: up × forward)
                         camera.right = np.cross(camera.up, camera.forward)
-                        camera.right = camera.right / np.linalg.norm(camera.right)
+                        if np.linalg.norm(camera.right) > 1e-6:
+                            camera.right = camera.right / np.linalg.norm(camera.right)
+                        else:
+                            # Fallback if cross product fails
+                            camera.right = np.array([1.0, 0.0, 0.0])
+                        
+                        # Initialize planetary coordinate system
+                        # planetary_up should point away from planet center (surface normal)
+                        radial_vector = camera.position - planetary_body.position
+                        if np.linalg.norm(radial_vector) > 0:
+                            camera.planetary_up = radial_vector / np.linalg.norm(radial_vector)
+                        else:
+                            camera.planetary_up = np.array([0.0, 1.0, 0.0])
+                        
+                        # planetary_right should be stable (east-west direction)
+                        # At north pole, east is along world X axis
+                        camera.planetary_right = np.array([1.0, 0.0, 0.0])
+                        
+                        # Clear any existing manual rotation
+                        if hasattr(camera, 'manual_rotation'):
+                            camera.manual_rotation = np.eye(3)
+                        else:
+                            camera.manual_rotation = np.eye(3)
                 elif event.key == K_r:
                     # Reset simulation
                     bodies = create_solar_system()
