@@ -644,55 +644,6 @@ def handle_planetary_input(camera, keys, movement_speed_multiplier=1.0, planetar
             # Fallback: use planetary_right if projection fails
             movement_direction = camera.planetary_right
         
-        # DEBUG: Comprehensive analysis of the issue
-        print("=== COMPREHENSIVE MOVEMENT DEBUG ===")
-        print(f"Current facing: {current_facing}")
-        print(f"Planetary up: {camera.planetary_up}")
-        print(f"Projection scalar: {projection_scalar:.6f}")
-        print(f"Movement direction: {movement_direction}")
-        
-        # Check alignment
-        facing_to_movement = np.dot(current_facing, movement_direction)
-        print(f"Facing to movement alignment: {facing_to_movement:.6f}")
-        
-        # Check if movement direction is tangent to surface
-        tangent_check = np.dot(movement_direction, camera.planetary_up)
-        print(f"Movement tangent check (should be ~0): {tangent_check:.6f}")
-        
-        # Check if movement direction is parallel to planetary forward
-        base_forward = np.cross(camera.planetary_right, camera.planetary_up)
-        if np.linalg.norm(base_forward) > 0:
-            base_forward = base_forward / np.linalg.norm(base_forward)
-        else:
-            base_forward = np.array([0, 0, 1])
-        
-        forward_alignment = np.dot(movement_direction, base_forward)
-        print(f"Movement to planetary forward alignment: {forward_alignment:.6f}")
-        
-        # Check rotation axis
-        radial_vector = camera.position - planetary_body.position
-        if np.linalg.norm(radial_vector) > 0:
-            radial_vector = radial_vector / np.linalg.norm(radial_vector)
-        else:
-            radial_vector = np.array([0, 1, 0])  # Fallback
-        
-        rotation_axis = np.cross(camera.planetary_up, movement_direction)
-        rotation_axis_magnitude = np.linalg.norm(rotation_axis)
-        print(f"Rotation axis: {rotation_axis}")
-        print(f"Rotation axis magnitude: {rotation_axis_magnitude:.6f}")
-        
-        # Check what happens with old method for comparison
-        old_rotation_axis = np.cross(radial_vector, movement_direction)
-        old_rotation_axis_magnitude = np.linalg.norm(old_rotation_axis)
-        print(f"OLD rotation axis magnitude: {old_rotation_axis_magnitude:.6f}")
-        
-        # Check movement distance
-        movement_dir = 1 if keys[K_w] else -1  # W=positive, S=negative
-        movement_distance = angular_speed * movement_dir
-        print(f"Movement distance: {movement_distance:.6f}")
-        
-        print("=== END DEBUG ===\n")
-        
         # Move along current facing direction (not base_forward!)
         movement_dir = 1 if keys[K_w] else -1  # W=positive, S=negative
         movement_distance = angular_speed * movement_dir

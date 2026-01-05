@@ -102,6 +102,7 @@ def main():
                     for attr in ['planetary_initial_forward', 'planetary_initial_anchor', 'planetary_initial_pitch', 'planetary_initial_yaw']:
                         if hasattr(camera, attr):
                             delattr(camera, attr)
+                    camera.reset_rotation()
                     if not locked_body and planetary_body:
                         # CRITICAL FIX: Position camera at north pole and set up orientation
                         # North pole is at body.position + (0, radius + offset, 0) in world coordinates
@@ -145,6 +146,12 @@ def main():
                     bodies = create_solar_system()
                     time_multiplier = TIME_MULTIPLIER
                     movement_speed_multiplier = 1.0
+                    # Reset camera to default state
+                    camera.reset_rotation()
+                    camera.position = np.array([0.0, 0.0, -5e11])  # Default position
+                    # Clear any active modes
+                    locked_body = None
+                    planetary_body = None
                 elif event.key == K_PLUS or event.key == K_EQUALS:
                     # Speed up time
                     time_multiplier = min(time_multiplier * 2, 100.0)
