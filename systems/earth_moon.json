@@ -1,0 +1,48 @@
+{
+  "distance_scale": 100000000,
+  "default_color": [
+    255,
+    255,
+    255
+  ],
+  "bodies": [
+    {
+      "name": "Earth",
+      "mass": 5.972e+24,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "radius": 40,
+      "color": "Earth",
+      "inclination": 0
+    },
+    {
+      "name": "Moon",
+      "mass": 7.342e+22,
+      "position": [
+        384400000.0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        1022
+      ],
+      "radius": 15,
+      "color": [
+        200,
+        200,
+        200
+      ],
+      "inclination": 5.1
+    }
+  ]
+}

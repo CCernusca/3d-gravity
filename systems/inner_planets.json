@@ -1,0 +1,95 @@
+{
+  "distance_scale": 100000000,
+  "default_color": [
+    255,
+    255,
+    255
+  ],
+  "bodies": [
+    {
+      "name": "Sun",
+      "mass": 1.989e+30,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "radius": 80,
+      "color": "Sun",
+      "inclination": 0
+    },
+    {
+      "name": "Mercury",
+      "mass": 3.301e+23,
+      "position": [
+        57900000000.0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        47870
+      ],
+      "radius": 15,
+      "color": "Mercury",
+      "inclination": 7.0
+    },
+    {
+      "name": "Venus",
+      "mass": 4.867e+24,
+      "position": [
+        108200000000.0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        35020
+      ],
+      "radius": 25,
+      "color": "Venus",
+      "inclination": 3.4
+    },
+    {
+      "name": "Earth",
+      "mass": 5.972e+24,
+      "position": [
+        149600000000.0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        29780
+      ],
+      "radius": 30,
+      "color": "Earth",
+      "inclination": 0.0
+    },
+    {
+      "name": "Mars",
+      "mass": 6.39e+23,
+      "position": [
+        227900000000.0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        24070
+      ],
+      "radius": 20,
+      "color": "Mars",
+      "inclination": 1.9
+    }
+  ]
+}

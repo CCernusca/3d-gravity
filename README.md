@@ -164,6 +164,7 @@ These controls work in all camera modes:
 - **`R`** - Reset simulation to initial state
 - **`T`** - Toggle orbital trails on/off
 - **`C`** - Toggle UI on/off
+- **`ENTER`** - Save current system state to file
 - **`.` / `,`** - Adjust camera movement (and rotation) speed (0.1x to 10x)
 - **`Mouse hover`** - Over planets to see detailed information
 - **`ESC`** - Exit simulation
@@ -263,6 +264,69 @@ Experience the solar system from a planetary surface perspective with unique vis
 
 ---
 
+## System Configurations
+
+### **Loading Different Systems**
+
+The simulation supports loading different celestial system configurations:
+
+```bash
+# Load default system (system.json)
+python main.py
+
+# Load specific system file
+python main.py --system systems/inner_planets.json
+
+# Load custom system
+python main.py --system path/to/your_system.json
+```
+
+### **Available Example Systems**
+
+**Complete Systems:**
+
+- **`systems/default_solar_system.json`** - Full solar system with all planets
+- **`systems/full_solar_system.json`** - Complete system with 24 bodies (planets + major moons + dwarf planets)
+- **`systems/inner_planets.json`** - Sun + Mercury, Venus, Earth, Mars (stable orbits)
+- **`systems/gas_giants.json`** - Sun + Jupiter, Saturn, Uranus, Neptune (wide spacing)
+
+**Special Configurations:**
+
+- **`systems/binary_star.json`** - Two stars with distant planets (improved stability)
+- **`systems/trinary_star.json`** - Three-star system with wide orbits
+- **`systems/earth_moon.json`** - Earth-Moon system for detailed observation
+- **`systems/jupiter_moons.json`** - Jupiter with four Galilean moons (realistic distances)
+- **`systems/asteroid_belt.json`** - Mars-Jupiter region with asteroids
+
+### **Save Current System**
+
+**Press `ENTER` anytime to save the current system state:**
+
+- **Save interesting moments** - Planetary alignments, unique configurations
+- **Create custom systems** - Modified positions and velocities
+- **Share configurations** - Save and share JSON files with others
+- **Experimental setups** - Save your gravitational scenarios
+
+**Files are saved to `systems/` folder and can be loaded with `--system` flag.**
+
+### **⚠️ Stability Warning**
+
+**Example configurations may become unstable over time:**
+
+- **Gravitational interactions** can cause orbital perturbations
+- **Close encounters** may result in slingshot effects
+- **Multi-body systems** are inherently chaotic
+- **Long simulations** (or also short ones) may show bodies ejected or collisions
+
+**For stable long-term viewing, consider:**
+
+- **Short time periods** - Observe initial orbital patterns
+- **Fewer bodies** - Simpler systems are more stable
+- **Careful positioning** - Avoid close initial encounters
+- **Save interesting states** - Press `ENTER` to preserve moments
+
+---
+
 ## Getting Started
 
 ### **Prerequisites**
@@ -302,28 +366,35 @@ python main.py
 
 ## Technical Details
 
-### **Physics Constants**
+### **Implementation Details**
 
-- **Gravitational constant**: G = 6.67430e-11 m³/kg·s²
-- **Time step**: DT = 86400 seconds (1 day)
-- **Distance scale**: 1e9 meters for astronomical distances
-- **Frame rate**: 60 FPS for smooth animation
+**Physics Engine:**
 
-### **Orbital Parameters**
+- **N-body gravitational simulation** - All bodies interact gravitationally
+- **Real gravitational constant** - G = 6.67430e-11 m³/kg·s²
+- **Configurable time step** - Default: 86400 seconds (1 day)
+- **Variable distance scale** - Set per system configuration
+- **60 FPS rendering** - Smooth animation with time-independent physics
 
-- **Mercury**: 5.79e10 m orbital radius, 47.87 km/s orbital velocity
-- **Venus**: 1.082e11 m orbital radius, 35.02 km/s orbital velocity  
-- **Earth**: 1.496e11 m orbital radius, 29.78 km/s orbital velocity
-- **Mars**: 2.279e11 m orbital radius, 24.07 km/s orbital velocity
-- **Jupiter**: 7.785e11 m orbital radius, 13.07 km/s orbital velocity
-- **Saturn**: 1.434e12 m orbital radius, 9.68 km/s orbital velocity
-- **Uranus**: 2.873e12 m orbital radius, 6.80 km/s orbital velocity
-- **Neptune**: 4.495e12 m orbital radius, 5.43 km/s orbital velocity
-- **Pluto**: 5.906e12 m orbital radius, 4.74 km/s orbital velocity
+**System Configuration:**
 
-### **Camera System**
+- **JSON-based loading** - Flexible system definitions
+- **Command line support** - `--system` flag for custom files
+- **Dynamic body properties** - Mass, position, velocity, radius, color
+- **Orbital inclinations** - Configurable per body in degrees
+- **Custom color schemes** - Hex, RGB, or named colors
 
-- **Projection**: Perspective projection with field-of-view scaling
-- **Movement**: 5 degrees of freedom (3 translation + 2 rotation)
-- **Rotation**: Global yaw (Y-axis) + local pitch (right vector)
-- **Depth calculation**: Dot product-based camera space transformation
+**Camera System:**
+
+- **Vector-based orientation** - Forward, up, right vectors
+- **5DOF movement** - 3 translation + 2 rotation (no roll)
+- **Multiple camera modes** - Normal, Lock, Planetary
+- **Perspective projection** - 3D to 2D screen transformation
+- **Depth-based rendering** - Proper occlusion and sorting
+
+**Save/Load System:**
+
+- **ENTER key saving** - Preserve current system state
+- **Complete state capture** - Positions, velocities, properties
+- **Human-readable JSON** - Editable and shareable
+- **Error handling** - Graceful fallbacks and validation

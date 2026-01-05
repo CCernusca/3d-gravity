@@ -1,0 +1,73 @@
+{
+  "distance_scale": 100000000,
+  "default_color": [
+    255,
+    255,
+    255
+  ],
+  "bodies": [
+    {
+      "name": "Primary Star",
+      "mass": 2e+30,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "radius": 80,
+      "color": [
+        255,
+        255,
+        200
+      ],
+      "inclination": 0
+    },
+    {
+      "name": "Secondary Star",
+      "mass": 1e+30,
+      "position": [
+        300000000000.0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        20000
+      ],
+      "radius": 60,
+      "color": [
+        200,
+        200,
+        255
+      ],
+      "inclination": 0
+    },
+    {
+      "name": "Tertiary Star",
+      "mass": 8e+29,
+      "position": [
+        -400000000000.0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        -18000
+      ],
+      "radius": 50,
+      "color": [
+        255,
+        200,
+        200
+      ],
+      "inclination": 0
+    }
+  ]
+}

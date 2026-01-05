@@ -1,0 +1,94 @@
+{
+  "distance_scale": 100000000,
+  "default_color": [
+    255,
+    255,
+    255
+  ],
+  "bodies": [
+    {
+      "name": "Star A",
+      "mass": 1.5e+30,
+      "position": [
+        -50000000000.0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        15000
+      ],
+      "radius": 70,
+      "color": [
+        255,
+        200,
+        100
+      ],
+      "inclination": 0
+    },
+    {
+      "name": "Star B",
+      "mass": 1.2e+30,
+      "position": [
+        50000000000.0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        -18750
+      ],
+      "radius": 60,
+      "color": [
+        100,
+        150,
+        255
+      ],
+      "inclination": 0
+    },
+    {
+      "name": "Planet 1",
+      "mass": 5e+24,
+      "position": [
+        400000000000.0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        30000
+      ],
+      "radius": 25,
+      "color": [
+        100,
+        255,
+        100
+      ],
+      "inclination": 2.0
+    },
+    {
+      "name": "Planet 2",
+      "mass": 3e+24,
+      "position": [
+        -600000000000.0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        -25000
+      ],
+      "radius": 20,
+      "color": [
+        255,
+        100,
+        255
+      ],
+      "inclination": -1.0
+    }
+  ]
+}

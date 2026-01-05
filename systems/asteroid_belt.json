@@ -1,0 +1,124 @@
+{
+  "distance_scale": 100000000,
+  "default_color": [
+    255,
+    255,
+    255
+  ],
+  "bodies": [
+    {
+      "name": "Sun",
+      "mass": 1.989e+30,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "radius": 80,
+      "color": "Sun",
+      "inclination": 0
+    },
+    {
+      "name": "Mars",
+      "mass": 6.39e+23,
+      "position": [
+        227900000000.0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        24070
+      ],
+      "radius": 20,
+      "color": "Mars",
+      "inclination": 1.9
+    },
+    {
+      "name": "Jupiter",
+      "mass": 1.898e+27,
+      "position": [
+        778500000000.0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        13070
+      ],
+      "radius": 60,
+      "color": "Jupiter",
+      "inclination": 1.3
+    },
+    {
+      "name": "Ceres",
+      "mass": 9.4e+20,
+      "position": [
+        413000000000.0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        17900
+      ],
+      "radius": 8,
+      "color": [
+        180,
+        180,
+        180
+      ],
+      "inclination": 10.6
+    },
+    {
+      "name": "Vesta",
+      "mass": 2.6e+20,
+      "position": [
+        353000000000.0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        19500
+      ],
+      "radius": 7,
+      "color": [
+        200,
+        180,
+        160
+      ],
+      "inclination": 7.1
+    },
+    {
+      "name": "Pallas",
+      "mass": 2.1e+20,
+      "position": [
+        414000000000.0,
+        10000000000.0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        17800
+      ],
+      "radius": 7,
+      "color": [
+        160,
+        180,
+        200
+      ],
+      "inclination": 34.8
+    }
+  ]
+}

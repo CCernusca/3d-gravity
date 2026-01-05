@@ -1,47 +1,57 @@
 import pygame
 from pygame.locals import *
-from scripts.physics import Body, update_physics, FPS, TIME_MULTIPLIER
+from scripts.physics import update_physics, FPS, TIME_MULTIPLIER
 from scripts.camera import Camera, handle_camera_input, handle_locked_camera_input, handle_planetary_input, check_hover
-from scripts.visuals import render_scene, SUN_COLOR, MERCURY_COLOR, VENUS_COLOR, EARTH_COLOR, MARS_COLOR, JUPITER_COLOR, SATURN_COLOR, URANUS_COLOR, NEPTUNE_COLOR, PLUTO_COLOR
+from scripts.visuals import render_scene
+from scripts.system_loader import load_solar_system, save_solar_system
 import numpy as np
+import argparse
+import tkinter as tk
+from tkinter import simpledialog, messagebox
+import os
 
 # Screen dimensions
 WIDTH, HEIGHT = 1000, 800
 
 
-def create_solar_system():
-    """Create a complete solar system with realistic orbital inclinations"""
-    # Scale factor based on astronomical distances
-    # Multiply radii by distance scale to make them visible
-    distance_scale = 1e8  # Scale factor for visibility at astronomical distances
+def save_current_system(bodies):
+    """Save current system state with user input dialog"""
     
-    # Orbital inclinations in radians (relative to solar system plane)
-    # Mercury: 7.0°, Venus: 3.4°, Earth: 0°, Mars: 1.9°, Jupiter: 1.3°, Saturn: 2.5°, Uranus: 0.8°, Neptune: 1.8°, Pluto: 17.2°
+    # Create root window (hidden)
+    root = tk.Tk()
+    root.withdraw()
     
-    return [
-        # Sun (massive for visual impact)
-        Body("Sun", 1.989e30, [0, 0, 0], [0, 0, 0], 80 * distance_scale, SUN_COLOR),
+    # Get filename from user
+    filename = simpledialog.askstring(
+        "Save System", 
+        "Enter filename (without extension):",
+        parent=root
+    )
+    
+    if filename:
+        # Ensure .json extension
+        if not filename.endswith('.json'):
+            filename += '.json'
         
-        # Inner planets with orbital inclinations
-        Body("Mercury", 3.301e23, [5.79e10, 0, 0], [0, 0, 47870], 15 * distance_scale, MERCURY_COLOR, inclination=np.radians(7.0)),
-        Body("Venus", 4.867e24, [1.082e11, 0, 0], [0, 0, 35020], 25 * distance_scale, VENUS_COLOR, inclination=np.radians(3.4)),
-        Body("Earth", 5.972e24, [1.496e11, 0, 0], [0, 0, 29780], 30 * distance_scale, EARTH_COLOR, inclination=np.radians(0.0)),
-        Body("Mars", 6.39e23, [2.279e11, 0, 0], [0, 0, 24070], 20 * distance_scale, MARS_COLOR, inclination=np.radians(1.9)),
+        # Save to systems folder
+        filepath = os.path.join('systems', filename)
         
-        # Gas giants with orbital inclinations
-        Body("Jupiter", 1.898e27, [7.785e11, 0, 0], [0, 0, 13070], 60 * distance_scale, JUPITER_COLOR, inclination=np.radians(1.3)),
-        Body("Saturn", 5.683e26, [1.434e12, 0, 0], [0, 0, 9680], 50 * distance_scale, SATURN_COLOR, inclination=np.radians(2.5)),
-        
-        # Ice giants with orbital inclinations
-        Body("Uranus", 8.681e25, [2.873e12, 0, 0], [0, 0, 6800], 35 * distance_scale, URANUS_COLOR, inclination=np.radians(0.8)),
-        Body("Neptune", 1.024e26, [4.495e12, 0, 0], [0, 0, 5430], 33 * distance_scale, NEPTUNE_COLOR, inclination=np.radians(1.8)),
-        
-        # Dwarf planet with highly inclined orbit
-        Body("Pluto", 1.309e22, [5.906e12, 0, 0], [0, 0, 4740], 10 * distance_scale, PLUTO_COLOR, inclination=np.radians(17.2))
-    ]
+        try:
+            save_solar_system(bodies, filepath)
+            messagebox.showinfo("Success", f"System saved to {filepath}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save system: {e}")
+    
+    root.destroy()
 
 
 def main():
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='3D Gravity Simulation')
+    parser.add_argument('--system', '-s', type=str, default='system.json',
+                        help='Path to solar system configuration file (default: system.json)')
+    args = parser.parse_args()
+    
     # Initialize Pygame
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
@@ -51,8 +61,8 @@ def main():
     # Dynamic screen dimensions
     current_width, current_height = WIDTH, HEIGHT
     
-    # Create celestial bodies
-    bodies = create_solar_system()
+    # Load celestial bodies from file
+    bodies = load_solar_system(args.system)
     
     # Camera
     camera = Camera()
@@ -141,9 +151,12 @@ def main():
                             camera.manual_rotation = np.eye(3)
                         else:
                             camera.manual_rotation = np.eye(3)
+                elif event.key == K_RETURN:
+                    # Save current system state
+                    save_current_system(bodies)
                 elif event.key == K_r:
                     # Reset simulation
-                    bodies = create_solar_system()
+                    bodies = load_solar_system(args.system)
                     time_multiplier = TIME_MULTIPLIER
                     movement_speed_multiplier = 1.0
                     # Reset camera to default state
@@ -157,7 +170,7 @@ def main():
                     time_multiplier = min(time_multiplier * 2, 100.0)
                 elif event.key == K_MINUS:
                     # Slow down time
-                    time_multiplier = max(time_multiplier / 1.5, 0.01)
+                    time_multiplier = max(time_multiplier / 2, 0.01)
                 elif event.key == K_PERIOD:
                     # Faster movement speed
                     movement_speed_multiplier = min(movement_speed_multiplier * 1.5, 10.0)

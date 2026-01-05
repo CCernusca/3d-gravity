@@ -1,0 +1,111 @@
+{
+  "distance_scale": 100000000,
+  "default_color": [
+    255,
+    255,
+    255
+  ],
+  "bodies": [
+    {
+      "name": "Jupiter",
+      "mass": 1.898e+27,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "radius": 80,
+      "color": "Jupiter",
+      "inclination": 0
+    },
+    {
+      "name": "Io",
+      "mass": 8.932e+22,
+      "position": [
+        421800000.0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        17334
+      ],
+      "radius": 12,
+      "color": [
+        255,
+        255,
+        150
+      ],
+      "inclination": 0.04
+    },
+    {
+      "name": "Europa",
+      "mass": 4.8e+22,
+      "position": [
+        671100000.0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        13740
+      ],
+      "radius": 10,
+      "color": [
+        150,
+        200,
+        255
+      ],
+      "inclination": 0.47
+    },
+    {
+      "name": "Ganymede",
+      "mass": 1.482e+23,
+      "position": [
+        1070400000.0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        10880
+      ],
+      "radius": 15,
+      "color": [
+        180,
+        150,
+        120
+      ],
+      "inclination": 0.18
+    },
+    {
+      "name": "Callisto",
+      "mass": 1.076e+23,
+      "position": [
+        1882700000.0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        8204
+      ],
+      "radius": 14,
+      "color": [
+        120,
+        100,
+        80
+      ],
+      "inclination": 0.19
+    }
+  ]
+}

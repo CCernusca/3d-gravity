@@ -1,0 +1,95 @@
+{
+  "distance_scale": 100000000,
+  "default_color": [
+    255,
+    255,
+    255
+  ],
+  "bodies": [
+    {
+      "name": "Sun",
+      "mass": 1.989e+30,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "radius": 80,
+      "color": "Sun",
+      "inclination": 0
+    },
+    {
+      "name": "Jupiter",
+      "mass": 1.898e+27,
+      "position": [
+        778500000000.0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        13070
+      ],
+      "radius": 60,
+      "color": "Jupiter",
+      "inclination": 1.3
+    },
+    {
+      "name": "Saturn",
+      "mass": 5.683e+26,
+      "position": [
+        1434000000000.0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        9680
+      ],
+      "radius": 50,
+      "color": "Saturn",
+      "inclination": 2.5
+    },
+    {
+      "name": "Uranus",
+      "mass": 8.681e+25,
+      "position": [
+        2873000000000.0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        6800
+      ],
+      "radius": 35,
+      "color": "Uranus",
+      "inclination": 0.8
+    },
+    {
+      "name": "Neptune",
+      "mass": 1.024e+26,
+      "position": [
+        4495000000000.0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        5430
+      ],
+      "radius": 33,
+      "color": "Neptune",
+      "inclination": 1.8
+    }
+  ]
+}
