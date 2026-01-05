@@ -533,11 +533,21 @@ def handle_planetary_input(camera, keys, movement_speed_multiplier=1.0, planetar
         rotation_dir = -1 if keys[K_UP] else 1
         angle = angular_speed * rotation_dir
         
-        # CRITICAL FIX: Use planetary_right for pitch rotation to avoid instability
-        # When camera is heavily yawed, current_forward and current_up become nearly parallel
-        # Their cross product (local_right) becomes unstable, causing pitch issues
-        # planetary_right remains stable regardless of camera orientation
-        local_right = camera.planetary_right
+        # CRITICAL FIX: Use stable pitch rotation axis to avoid pole collapse
+        # When camera.forward becomes parallel to planetary_up, cross product becomes unstable
+        # Solution: Use camera's current right vector if stable, otherwise use planetary_right as fallback
+        
+        # First try to use camera's current right vector
+        if hasattr(camera, 'right') and np.linalg.norm(camera.right) > 1e-6:
+            local_right = camera.right
+        else:
+            # Fallback: calculate from forward and planetary_up
+            local_right = np.cross(camera.forward, camera.planetary_up)
+            if np.linalg.norm(local_right) > 1e-6:
+                local_right = local_right / np.linalg.norm(local_right)
+            else:
+                # Final fallback: use planetary_right (always stable)
+                local_right = camera.planetary_right
         
         pitch_matrix = _rotation_matrix_from_axis_angle(local_right, angle)
     
