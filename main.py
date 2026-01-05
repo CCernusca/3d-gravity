@@ -102,9 +102,23 @@ def main():
                     for attr in ['planetary_initial_forward', 'planetary_initial_anchor', 'planetary_initial_pitch', 'planetary_initial_yaw']:
                         if hasattr(camera, attr):
                             delattr(camera, attr)
-                    if not locked_body:
-                        # Reset all rotation
-                        camera.reset_rotation()
+                    if not locked_body and planetary_body:
+                        # CRITICAL FIX: Position camera at north pole and align with planetary up
+                        # North pole is at body.position + (0, radius, 0) in world coordinates
+                        north_pole_offset = np.array([0.0, planetary_body.radius + 7e7, 0.0])
+                        camera.position = planetary_body.position + north_pole_offset
+                        
+                        # Align camera's up with planetary up (away from planet center)
+                        planetary_up_vector = np.array([0.0, 1.0, 0.0])  # Up at north pole
+                        camera.align_up_to_vector(planetary_up_vector)
+                        
+                        # Point camera toward planet center (looking down from north pole)
+                        camera.forward = -planetary_up_vector
+                        camera.forward = camera.forward / np.linalg.norm(camera.forward)
+                        
+                        # Recalculate right vector to maintain orthogonal system
+                        camera.right = np.cross(camera.up, camera.forward)
+                        camera.right = camera.right / np.linalg.norm(camera.right)
                 elif event.key == K_r:
                     # Reset simulation
                     bodies = create_solar_system()

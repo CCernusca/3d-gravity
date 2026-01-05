@@ -99,10 +99,22 @@ def draw_bodies(screen, bodies, camera, width, height, planetary_body=None):
     body_renders = []
     
     for body in bodies:
-        # In planetary mode, always render the planetary body
+        # In planetary mode, check if planetary body should be rendered
         if planetary_body and body == planetary_body:
+            # CRITICAL FIX: Check if planetary body is behind the camera with 60° leeway
+            # Calculate if planet center is behind the camera
+            relative_pos = body.position - camera.position
+            # Normalize relative_pos to get proper direction vector
+            if np.linalg.norm(relative_pos) > 0:
+                relative_pos = relative_pos / np.linalg.norm(relative_pos)
+            forward = camera.get_forward_vector()
+            dot_product = np.dot(relative_pos, forward)
+            
+            # Only render if planet is in front of camera (dot_product >= 0)
+            if dot_product >= 0:
                 # Force planetary body to render last (on top) by using maximum depth
                 body_renders.append((0, body, 0, 0, 1))  # Always on top
+            # Skip rendering if planet is more than 45° behind camera
         else:
             # Normal rendering for other bodies
             # Transform to camera space (translate)
@@ -142,7 +154,7 @@ def draw_bodies(screen, bodies, camera, width, height, planetary_body=None):
             
             if proj_scale is not None:
                 # Calculate screen space radius
-                screen_radius = max(3, int(body.radius * proj_scale))
+                screen_radius = max(1.5, int(body.radius * proj_scale))
                 
                 # Draw the filled circle if center is on screen
                 center_proj_x, center_proj_y, center_cam_z, center_scale = project_3d_to_2d(body.position, camera, width, height)

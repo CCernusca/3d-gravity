@@ -137,6 +137,41 @@ class Camera:
         self.up = self.up / np.linalg.norm(self.up)
         self.right = self.right / np.linalg.norm(self.right)
     
+    def align_up_to_vector(self, target_up):
+        """Align camera's up vector with target vector while preserving forward direction as much as possible"""
+        target_up = target_up / np.linalg.norm(target_up)  # Ensure normalized
+        
+        # Calculate rotation axis and angle to align current up with target up
+        rotation_axis = np.cross(self.up, target_up)
+        rotation_axis_magnitude = np.linalg.norm(rotation_axis)
+        
+        if rotation_axis_magnitude < 1e-6:
+            # Vectors are already parallel or anti-parallel
+            if np.dot(self.up, target_up) < 0:
+                # Anti-parallel: rotate 180° around forward axis
+                self.up = -self.up
+                self.right = -self.right
+            return
+        
+        # Normalize rotation axis
+        rotation_axis = rotation_axis / rotation_axis_magnitude
+        
+        # Calculate rotation angle
+        cos_angle = np.dot(self.up, target_up)
+        angle = np.arccos(np.clip(cos_angle, -1.0, 1.0))
+        
+        # Rotate up and right vectors around the calculated axis
+        self.up = _rotate_vector_around_axis(self.up, rotation_axis, angle)
+        self.right = _rotate_vector_around_axis(self.right, rotation_axis, angle)
+        
+        # Ensure vectors are normalized
+        self.up = self.up / np.linalg.norm(self.up)
+        self.right = self.right / np.linalg.norm(self.right)
+        
+        # Recalculate forward to maintain orthogonal system
+        self.forward = np.cross(self.right, self.up)
+        self.forward = self.forward / np.linalg.norm(self.forward)
+    
     def get_yaw(self):
         """Get yaw angle for UI display only"""
         return np.arctan2(self.forward[0], self.forward[2])
@@ -709,8 +744,8 @@ def handle_planetary_input(camera, keys, movement_speed_multiplier=1.0, planetar
     new_distance = np.linalg.norm(new_anchor_vector)
     
     if new_distance > 0:
-        # Fix distance to radius + 1e9 with gentle correction
-        target_distance = planetary_body.radius + 1e9
+        # Fix distance to radius with gentle correction
+        target_distance = planetary_body.radius + 7e7
         distance_error = new_distance - target_distance
         
         # Only correct if distance error is significant (> 1% of target)
